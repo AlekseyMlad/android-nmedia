@@ -149,7 +149,10 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     fun showNewPosts() {
-        _isNewPostsButtonVisible.value = false
+        viewModelScope.launch {
+            repository.saveNewPosts()
+            _isNewPostsButtonVisible.value = false
+        }
     }
 
 }

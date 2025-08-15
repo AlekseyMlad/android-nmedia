@@ -38,7 +38,7 @@ class PostRepositoryImpl(private val dao: PostDao) : PostRepository {
 
     override fun getNewerCount(id: Long): Flow<Int> = flow {
         while (true) {
-            val maxIdInDb = dao.getMaxId() ?: 0 // Получаем максимальный id из БД
+            val maxIdInDb = dao.getMaxId() ?: 0
             val response = PostsApi.service.getNewer(maxIdInDb)
 
             if (!response.isSuccessful) {
@@ -47,15 +47,22 @@ class PostRepositoryImpl(private val dao: PostDao) : PostRepository {
 
             val body = response.body() ?: throw ApiError(response.code(), response.message())
             if (body.isNotEmpty()) {
-                dao.insert(body.toEntity()) // Сохраняем новые посты в БД
-                emit(body.size) // Emit'им количество новых постов
+                emit(body.size)
+                newPostsBuffer.addAll(body)
             } else {
-                emit(0) // Нет новых постов
+                emit(0)
             }
         }
     }
         .catch { e -> throw AppError.from(e) }
         .flowOn(Dispatchers.Default)
+
+    private val newPostsBuffer = mutableListOf<Post>()
+
+    override suspend fun saveNewPosts() {
+        dao.insert(newPostsBuffer.toEntity())
+        newPostsBuffer.clear()
+    }
 
     override suspend fun save(post: Post) {
         try {
@@ -76,11 +83,10 @@ class PostRepositoryImpl(private val dao: PostDao) : PostRepository {
     override suspend fun removeById(id: Long) {
         try {
             val response = PostsApi.service.removeById(id)
+            dao.removeById(id)
             if (!response.isSuccessful) {
                 throw ApiError(response.code(), response.message())
             }
-            dao.removeById(id)
-
         } catch (e: IOException) {
             throw NetworkError
         } catch (e: Exception) {
@@ -89,24 +95,34 @@ class PostRepositoryImpl(private val dao: PostDao) : PostRepository {
     }
 
     override suspend fun likeById(id: Long) {
-        try {
-            val postEntity = dao.getById(id) ?: throw IllegalArgumentException("Post not found")
-            val post = postEntity.toDto()
 
+        val postEntity = dao.getById(id) ?: throw IllegalArgumentException("Post not found")
+        val post = postEntity.toDto()
+
+        val newPost = post.copy(likedByMe = !post.likedByMe, likes = if (post.likedByMe) post.likes - 1 else post.likes + 1)
+        val newPostEntity = PostEntity.fromDto(newPost)
+        dao.insert(newPostEntity)
+
+        try {
             val response = if (post.likedByMe) {
                 PostsApi.service.dislikeById(id)
             } else {
                 PostsApi.service.likeById(id)
             }
             if (!response.isSuccessful) {
+                val originalPostEntity = postEntity
+                dao.insert(originalPostEntity)
                 throw ApiError(response.code(), response.message())
             }
 
             val body = response.body() ?: throw ApiError(response.code(), response.message())
             dao.insert(PostEntity.fromDto(body))
+
         } catch (e: IOException) {
+            dao.insert(postEntity)
             throw NetworkError
         } catch (e: Exception) {
+            dao.insert(postEntity)
             throw UnknownError
         }
     }
