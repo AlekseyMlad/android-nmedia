@@ -1,23 +1,23 @@
 package ru.netology.nmedia.viewmodel
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import ru.netology.nmedia.api.PostsApi
 import ru.netology.nmedia.db.AppDb
 import ru.netology.nmedia.dto.Post
 import ru.netology.nmedia.model.FeedModel
 import ru.netology.nmedia.model.FeedModelState
+import ru.netology.nmedia.model.PhotoModel
 import ru.netology.nmedia.repository.PostRepository
 import ru.netology.nmedia.repository.PostRepositoryImpl
 import ru.netology.nmedia.util.SingleLiveEvent
+import java.io.File
 
 private val empty = Post(
     id = 0,
@@ -39,6 +39,9 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
         .catch { it.printStackTrace() }
         .asLiveData(Dispatchers.Default)
 
+    private val _photo = MutableLiveData<PhotoModel?>(null)
+    val photo: LiveData<PhotoModel?>
+        get() = _photo
     private val _dataState = MutableLiveData<FeedModelState>()
     val dataState: LiveData<FeedModelState>
         get() = _dataState
@@ -58,12 +61,20 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
         loadPosts()
     }
 
+    fun savePhoto(uri: Uri, file: File) {
+        _photo.value = PhotoModel(uri, file)
+    }
+
+    fun removePhoto() {
+        _photo.value = null
+    }
+
     fun loadPosts() = viewModelScope.launch {
         try {
             _dataState.value = FeedModelState(loading = true)
             repository.getAll()
             _dataState.value = FeedModelState()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             _dataState.value = FeedModelState(error = true)
         }
     }
@@ -73,7 +84,7 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
             _dataState.value = FeedModelState(refreshing = true)
             repository.getAll()
             _dataState.value = FeedModelState()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             _dataState.value = FeedModelState(error = true)
         }
     }
@@ -83,9 +94,9 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
             _postCreated.value = Unit
             viewModelScope.launch {
                 try {
-                    repository.save(it)
+                    repository.save(it, photo.value?.file)
                     _dataState.value = FeedModelState()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     _dataState.value = FeedModelState(error = true)
                 }
             }
@@ -112,7 +123,7 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
                 repository.likeById(id)
                 _dataState.value = FeedModelState()
 
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _dataState.value = FeedModelState(error = true)
             }
         }
@@ -125,17 +136,17 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
                 repository.removeById(id)
                 _dataState.value = FeedModelState()
 
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _dataState.value = FeedModelState(error = true)
             }
         }
     }
 
     private val _newPostsCount = MutableLiveData(0)
-    val newPostsCount: LiveData<Int> = _newPostsCount
+    //val newPostsCount: LiveData<Int> = _newPostsCount
 
     private val _isNewPostsButtonVisible = MutableLiveData(false)
-    val isNewPostsButtonVisible: LiveData<Boolean> = _isNewPostsButtonVisible
+    //val isNewPostsButtonVisible: LiveData<Boolean> = _isNewPostsButtonVisible
 
     init {
         viewModelScope.launch {
@@ -151,7 +162,6 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
     fun showNewPosts() {
         viewModelScope.launch {
             repository.saveNewPosts()
-            _isNewPostsButtonVisible.value = false
         }
     }
 

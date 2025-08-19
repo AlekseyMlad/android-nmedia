@@ -69,6 +69,8 @@ dependencies {
     def retrofitgson_version = "2.11.0"
     def okhttplogging_version = "4.12.0"
     def coroutines_version = "1.10.2"
+    def imagepicker_version = "2.1"
+    def fragment_version = "1.8.6"
     def play_services_base_version = "18.7.0"
     def core_desugaring_version = "2.1.5"
 
@@ -96,6 +98,8 @@ dependencies {
     implementation "com.squareup.retrofit2:converter-gson:$retrofitgson_version"
     implementation "com.squareup.okhttp3:logging-interceptor:$okhttplogging_version"
     implementation "com.github.bumptech.glide:glide:$glide_version"
+    implementation "com.github.dhaval2404:imagepicker:$imagepicker_version"
+    implementation "androidx.fragment:fragment-ktx:$fragment_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutines_version"
     implementation "com.google.android.gms:play-services-base:$play_services_base_version"
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:$core_desugaring_version"

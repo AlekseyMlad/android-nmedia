@@ -22,4 +22,7 @@
     <string name="channel_remote_name">Уведомления с сервера</string>
     <string name="channel_remote_description">Уведомления с удалённого сервера</string>
     <string name="new_posts">Новые посты</string>
+    <string name="remove">Удалить</string>
+    <string name="image_picker_error">Ошибка выбора изображения</string>
+
 </resources>

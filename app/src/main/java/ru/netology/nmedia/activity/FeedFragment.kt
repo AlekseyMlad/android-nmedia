@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -20,8 +21,8 @@ import ru.netology.nmedia.viewmodel.PostViewModel
 class FeedFragment : Fragment() {
 
     private val viewModel: PostViewModel by activityViewModels()
-    private lateinit var binding: FragmentFeedBinding
-    private lateinit var adapter: PostsAdapter
+//    private lateinit var binding: FragmentFeedBinding
+//    private lateinit var adapter: PostsAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -54,7 +55,19 @@ class FeedFragment : Fragment() {
                     Intent.createChooser(intent, getString(R.string.chooser_share_post))
                 startActivity(shareIntent)
             }
+
+            override fun onAttachment(post: Post) {
+                post.attachment?.let { attachment ->
+                    val bundle = Bundle().apply {
+                        putString("imageUrl", attachment.url) // Передаем URL изображения
+                    }
+                    findNavController().navigate(R.id.action_feedFragment_to_attachmentImageFragment, bundle)
+                } ?: run {
+                    Toast.makeText(context, "Image URL not found", Toast.LENGTH_SHORT).show()
+                }
+            }
         })
+
         binding.list.adapter = adapter
         viewModel.dataState.observe(viewLifecycleOwner) { state ->
             binding.progress.isVisible = state.loading
@@ -65,10 +78,12 @@ class FeedFragment : Fragment() {
                     .show()
             }
         }
+
         viewModel.data.observe(viewLifecycleOwner) { state ->
             adapter.submitList(state.posts)
             binding.emptyText.isVisible = state.empty
         }
+
         viewModel.newerCount.observe(viewLifecycleOwner) { count ->
             if (count > 0) {
                 binding.newPostsButton.isVisible = true // Показываем плашку
@@ -77,7 +92,6 @@ class FeedFragment : Fragment() {
             } else {
                 binding.newPostsButton.isVisible = false // Скрываем плашку
             }
-
         }
 
         binding.newPostsButton.setOnClickListener {

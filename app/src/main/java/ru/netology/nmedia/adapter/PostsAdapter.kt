@@ -1,14 +1,17 @@
 package ru.netology.nmedia.adapter
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupMenu
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import ru.netology.nmedia.BuildConfig
+import com.bumptech.glide.Glide
+import ru.netology.nmedia.BuildConfig.BASE_URL
 import ru.netology.nmedia.R
 import ru.netology.nmedia.databinding.CardPostBinding
+import ru.netology.nmedia.dto.AttachmentType
 import ru.netology.nmedia.dto.Post
 import ru.netology.nmedia.view.loadCircleCrop
 
@@ -17,6 +20,8 @@ interface OnInteractionListener {
     fun onEdit(post: Post) {}
     fun onRemove(post: Post) {}
     fun onShare(post: Post) {}
+
+    fun onAttachment(post: Post) {}
 }
 
 class PostsAdapter(
@@ -43,9 +48,23 @@ class PostViewHolder(
             author.text = post.author
             published.text = post.published
             content.text = post.content
-            avatar.loadCircleCrop("${BuildConfig.BASE_URL}/avatars/${post.authorAvatar}")
+            avatar.loadCircleCrop("${BASE_URL}/avatars/${post.authorAvatar}")
             like.isChecked = post.likedByMe
             like.text = "${post.likes}"
+
+            if (post.attachment != null && post.attachment.type == AttachmentType.IMAGE) {
+                attachmentImage.visibility = View.VISIBLE // Показываем ImageView
+                val attachmentUrl = "$BASE_URL/media/${post.attachment.url}"
+
+                Glide.with(itemView.context)
+                    .load(attachmentUrl)
+                    .placeholder(R.drawable.ic_downloading_24)
+                    .error(R.drawable.ic_baseline_error_24)
+                    .timeout(10_000)
+                    .into(attachmentImage)
+            } else {
+                attachmentImage.visibility = View.GONE // Скрываем ImageView, если нет вложения
+            }
 
             menu.setOnClickListener {
                 PopupMenu(it.context, it).apply {
@@ -65,6 +84,10 @@ class PostViewHolder(
                         }
                     }
                 }.show()
+            }
+
+            attachmentImage.setOnClickListener {
+                onInteractionListener.onAttachment(post)
             }
 
             like.setOnClickListener {
